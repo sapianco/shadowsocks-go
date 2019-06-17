@@ -1,0 +1,10 @@
+package: github.com/sapian/shadowsocks-go
+import:
+- package: github.com/shadowsocks/shadowsocks-go
+  repo:    https://github.com/sapian/shadowsocks-go.git
+- package: github.com/aead/chacha20
+- package: golang.org/x/crypto
+  subpackages:
+  - blowfish
+  - cast5
+  - salsa20/salsa

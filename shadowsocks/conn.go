@@ -61,6 +61,15 @@ func DialWithRawAddr(rawaddr []byte, server string, cipher *Cipher) (c *Conn, er
 	if err != nil {
 		return
 	}
+	file, err := conn.File()
+	if err != nil {
+		return
+	}
+	err = syscall.SetsockoptInt(int(file.Fd()), syscall.IPPROTO_IP, syscall.IP_TOS, 57)
+	file.Close()
+	if err != nil {
+		return
+	}
 	c = NewConn(conn, cipher)
 	if _, err = c.Write(rawaddr); err != nil {
 		c.Close()
