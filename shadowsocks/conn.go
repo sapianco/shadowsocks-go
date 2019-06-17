@@ -6,6 +6,8 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"os"
+	"syscall"
 )
 
 const (
@@ -57,19 +59,37 @@ func RawAddr(addr string) (buf []byte, err error) {
 // rawaddr shoud contain part of the data in socks request, starting from the
 // ATYP field. (Refer to rfc1928 for more information.)
 func DialWithRawAddr(rawaddr []byte, server string, cipher *Cipher) (c *Conn, err error) {
-	conn, err := net.Dial("tcp", server)
+	// conn, err := net.Dial("tcp", server)
+	// if err != nil {
+	// 	return
+	// }
+	tcpAddr, err := net.ResolveTCPAddr("tcp", server)
 	if err != nil {
-		return
+    return nil, err
 	}
-	file, err := conn.File()
+	sa := &syscall.SockaddrInet4{
+    Port: tcpAddr.Port,
+    Addr: [4]byte{tcpAddr.IP[0], tcpAddr.IP[1], tcpAddr.IP[2], tcpAddr.IP[3]},
+	}
+
+	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
 	if err != nil {
-		return
+    return nil, err
 	}
-	err = syscall.SetsockoptInt(int(file.Fd()), syscall.IPPROTO_IP, syscall.IP_TOS, 57)
-	file.Close()
+
+	err = syscall.SetsockoptInt(fd, syscall.IPPROTO_IP, syscall.IP_TOS, 57)
 	if err != nil {
-		return
+    return nil, err
 	}
+
+	err = syscall.Connect(fd, sa)
+	if err != nil {
+    return nil, err
+	}
+
+	file := os.NewFile(uintptr(fd), "")
+	conn, err := net.FileConn(file)
+
 	c = NewConn(conn, cipher)
 	if _, err = c.Write(rawaddr); err != nil {
 		c.Close()
